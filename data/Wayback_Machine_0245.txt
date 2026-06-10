@@ -1,0 +1,1 @@
+Snapshots usually become available more than six months after they are archived or, in some cases, even later; it can take twenty-four months or longer.  The frequency of snapshots is variable, so not all tracked web site updates are recorded. Sometimes there are intervals of several weeks or years between snapshots.
