@@ -15,12 +15,203 @@ import config
 API_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="Semantic Search Engine",
-    page_icon="🔍",
-    layout="wide"
+    page_title="SemantiSeek — Semantic Search Engine",
+    page_icon="",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ── load models once at app startup ──────────────────────────
+# ── Premium UI Styles ─────────────────────────────────────────
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        font-family: 'Outfit', sans-serif !important;
+    }
+    code, pre { font-family: 'Fira Code', monospace !important; }
+
+    .premium-banner {
+        background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(99,102,241,0.08) 100%);
+        border: 1px solid rgba(239,68,68,0.15);
+        border-radius: 18px;
+        padding: 32px 24px;
+        margin-bottom: 28px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+    }
+    .premium-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #EF4444 0%, #6366F1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+    }
+    .premium-subtitle {
+        font-size: 0.95rem;
+        color: var(--text-color);
+        opacity: 0.7;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin: 24px 0 28px 0;
+        border-top: 1px solid rgba(128,128,128,0.12);
+        padding-top: 20px;
+    }
+    .summary-box {
+        background: var(--secondary-background-color);
+        border: 1px solid rgba(128,128,128,0.14);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    .summary-box:hover { border-color: rgba(99,102,241,0.25); }
+    .summary-lbl {
+        font-size: 0.75rem;
+        color: var(--text-color);
+        opacity: 0.55;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        margin-bottom: 4px;
+    }
+    .summary-val { font-size: 1.6rem; font-weight: 700; color: var(--text-color); }
+
+    .glass-card {
+        background: var(--secondary-background-color) !important;
+        border: 1px solid rgba(128,128,128,0.16) !important;
+        border-radius: 14px !important;
+        padding: 20px !important;
+        margin-bottom: 18px !important;
+        transition: transform 0.2s ease, border-color 0.2s ease !important;
+    }
+    .glass-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(239,68,68,0.35) !important;
+        box-shadow: 0 8px 24px rgba(239,68,68,0.05) !important;
+    }
+    .card-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .card-source { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
+    .badge-pill {
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.78rem;
+        font-family: 'Fira Code', monospace;
+        border: 1px solid rgba(239,68,68,0.2);
+        background-color: rgba(239,68,68,0.08);
+        color: #EF4444;
+    }
+    .rerank-badge {
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.78rem;
+        font-family: 'Fira Code', monospace;
+        border: 1px solid rgba(99,102,241,0.2);
+        background-color: rgba(99,102,241,0.08);
+        color: #6366F1;
+        margin-left: 6px;
+    }
+    .card-quote {
+        font-size: 0.92rem;
+        line-height: 1.6;
+        color: var(--text-color);
+        opacity: 0.9;
+        background-color: rgba(128,128,128,0.04);
+        padding: 12px 16px;
+        border-radius: 8px;
+        border-left: 3px solid #EF4444;
+    }
+    .card-meta {
+        margin-top: 10px;
+        font-size: 0.8rem;
+        color: var(--text-color);
+        opacity: 0.5;
+        display: flex;
+        gap: 16px;
+    }
+
+    .status-badge {
+        background-color: rgba(16,185,129,0.08);
+        border: 1px solid rgba(16,185,129,0.18);
+        color: #10b981;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .status-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background-color: #10b981;
+        box-shadow: 0 0 8px #10b981;
+        animation: pulse 2s infinite;
+    }
+    .status-offline {
+        background-color: rgba(239,68,68,0.08);
+        border: 1px solid rgba(239,68,68,0.18);
+        color: #EF4444;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        margin-bottom: 16px;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .stButton > button {
+        background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 15px !important;
+        box-shadow: 0 4px 14px rgba(239,68,68,0.25) !important;
+        transition: all 0.2s ease !important;
+        width: 100% !important;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 18px rgba(239,68,68,0.35) !important;
+    }
+
+    div[data-baseweb="input"] {
+        border-radius: 10px !important;
+        border: 1px solid rgba(128,128,128,0.2) !important;
+        transition: border-color 0.2s ease !important;
+    }
+    div[data-baseweb="input"]:focus-within {
+        border-color: #EF4444 !important;
+        box-shadow: 0 0 0 3px rgba(239,68,68,0.12) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Load models once ──────────────────────────────────────────
 @st.cache_resource
 def load_models():
     dense = HuggingFaceEmbeddings(
@@ -28,88 +219,66 @@ def load_models():
         model_kwargs={"device": config.MODEL_DEVICE},
         encode_kwargs={"normalize_embeddings": True}
     )
-    sparse  = SparseTextEmbedding(
-        model_name=config.SPARSE_MODEL
-    )
+    sparse  = SparseTextEmbedding(model_name=config.SPARSE_MODEL)
     reranker = get_reranker()
     return dense, sparse, reranker
 
-# ── session state ─────────────────────────────────────────────
+# ── Session state ─────────────────────────────────────────────
 if "session_id" not in st.session_state:
-    st.session_state.session_id  = None
+    st.session_state.session_id = None
 if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "search_mode" not in st.session_state:
     st.session_state.search_mode = "knowledge_base"
 
-# ── header ────────────────────────────────────────────────────
-st.title("Semantic Search Engine")
-st.caption(
-    "BGE-base embeddings · Qdrant hybrid search · "
-    "Cross-encoder reranking · Redis cache"
-)
-
-# ── sidebar ───────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────
 with st.sidebar:
-    st.header(" Settings")
-    top_k        = st.slider("Results", 1, 10, 5)
-    use_reranking = st.toggle("Reranking", value=True)
+    st.markdown('<div style="font-size:1.15rem;font-weight:700;margin-bottom:12px;">⚙️ Settings</div>', unsafe_allow_html=True)
+    top_k         = st.slider("Results", 1, 10, 5)
+    use_reranking = st.toggle("Cross-Encoder Reranking", value=True)
 
-    st.divider()
-    st.header(" Search Mode")
-    mode = st.radio(
-        "Search over:",
-        ["Knowledge base", "My uploaded document"],
-        index=0
-    )
-    st.session_state.search_mode = (
-        "upload" if mode == "My uploaded document"
-        else "knowledge_base"
-    )
+    st.markdown("<hr style='border-color:rgba(128,128,128,0.12);margin:18px 0;'/>", unsafe_allow_html=True)
+    st.markdown('<div style="font-size:1.15rem;font-weight:700;margin-bottom:12px;"> Search Mode</div>', unsafe_allow_html=True)
+    mode = st.radio("Search over:", ["Knowledge base", "My uploaded document"], index=0)
+    st.session_state.search_mode = "upload" if mode == "My uploaded document" else "knowledge_base"
 
-    st.divider()
-    st.header(" System Status")
+    st.markdown("<hr style='border-color:rgba(128,128,128,0.12);margin:18px 0;'/>", unsafe_allow_html=True)
+    st.markdown('<div style="font-size:1.15rem;font-weight:700;margin-bottom:12px;">System Status</div>', unsafe_allow_html=True)
     try:
-        health = requests.get(
-            f"{API_URL}/health", timeout=3
-        ).json()
-        st.success(" API connected")
-        st.metric("Vectors indexed",
-                  health.get("vector_count", 0))
+        health = requests.get(f"{API_URL}/health", timeout=3).json()
+        st.markdown('<div class="status-badge"><span class="status-dot"></span> API connected</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="font-size:0.8rem;opacity:0.6;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Vectors indexed</div>
+        <div style="font-size:2.2rem;font-weight:800;color:#EF4444;line-height:1.1;">{health.get("vector_count", 0)}</div>
+        """, unsafe_allow_html=True)
     except Exception:
-        st.error(" API offline")
-        st.caption("Run: python main.py api")
+        st.markdown('<div class="status-offline">❌ API offline — run: python main.py api</div>', unsafe_allow_html=True)
 
-# ── document upload panel ─────────────────────────────────────
+# ── Header Banner ─────────────────────────────────────────────
+st.markdown("""
+<div class="premium-banner">
+    <div class="premium-title">🔍 Semantic Search Engine</div>
+    <div class="premium-subtitle">
+        BGE-base embeddings &bull; Qdrant hybrid search &bull; Cross-encoder reranking &bull; Redis cache
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Upload Panel ──────────────────────────────────────────────
 if st.session_state.search_mode == "upload":
-    st.subheader(" Upload Your Document")
-
-    uploaded = st.file_uploader(
-        "Drop a file here",
-        type=["pdf", "txt", "docx"],
-        help="Supported: PDF, TXT, DOCX"
-    )
+    st.markdown("### Upload Your Document")
+    uploaded = st.file_uploader("Drop a file here", type=["pdf", "txt", "docx"], help="Supported: PDF, TXT, DOCX")
 
     if uploaded is not None:
-        if (st.session_state.uploaded_file
-                != uploaded.name):
-
-            with st.spinner(
-                f"Processing {uploaded.name}..."
-            ):
-                # Delete previous session if exists
+        if st.session_state.uploaded_file != uploaded.name:
+            with st.spinner(f"Processing {uploaded.name}..."):
                 if st.session_state.session_id:
                     try:
-                        delete_session(
-                            st.session_state.session_id
-                        )
+                        delete_session(st.session_state.session_id)
                     except Exception:
                         pass
-
-                # New session
                 session_id = str(uuid.uuid4())[:8]
                 dense, sparse, _ = load_models()
-
                 result = ingest_uploaded_file(
                     file_bytes=uploaded.getvalue(),
                     filename=uploaded.name,
@@ -117,43 +286,40 @@ if st.session_state.search_mode == "upload":
                     dense_embedder=dense,
                     sparse_embedder=sparse
                 )
-
                 if result["status"] == "success":
-                    st.session_state.session_id    = session_id
+                    st.session_state.session_id   = session_id
                     st.session_state.uploaded_file = uploaded.name
-                    st.success(
-                        f"✅**{uploaded.name}** processed!\n\n"
-                        f"- Pages: {result['pages']}\n"
-                        f"- Chunks created: "
-                        f"{result['chunks_created']}\n"
-                        f"- Session: {session_id}"
-                    )
+                    st.markdown(f"""
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);padding:12px 16px;border-radius:8px;font-size:0.92rem;margin-top:10px;font-weight:500;">
+                         <strong>{uploaded.name}</strong> processed — {result['chunks_created']} chunks · Session: {session_id}
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    st.error(result.get("message",
-                                        "Processing failed"))
+                    st.error(result.get("message", "Processing failed"))
         else:
-            st.info(
-                f" **{uploaded.name}** already loaded. "
-                f"Ready to search."
-            )
+            st.markdown(f"""
+            <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);padding:12px 16px;border-radius:8px;font-size:0.92rem;margin-bottom:10px;font-weight:500;">
+                 <strong>{uploaded.name}</strong> already loaded. Ready to search.
+            </div>
+            """, unsafe_allow_html=True)
 
     if st.session_state.session_id:
-        if st.button(" Clear document"):
+        if st.button("Clear document"):
             delete_session(st.session_state.session_id)
-            st.session_state.session_id   = None
+            st.session_state.session_id    = None
             st.session_state.uploaded_file = None
             st.rerun()
 
-# ── search bar ────────────────────────────────────────────────
-st.divider()
+# ── Search Bar ────────────────────────────────────────────────
+st.markdown("<hr style='border-color:rgba(128,128,128,0.12);margin:24px 0;'/>", unsafe_allow_html=True)
 
 if st.session_state.search_mode == "upload":
-    placeholder = ("Ask anything about your document...")
+    placeholder = "Ask anything about your document..."
     disabled    = st.session_state.session_id is None
     if disabled:
-        st.warning("Upload a document first to search it.")
+        st.warning(" Upload a document first to search it.")
 else:
-    placeholder = "how does solar energy affect temperature?"
+    placeholder = "how does chain-of-thought prompting improve reasoning?"
     disabled    = False
 
 query = st.text_input(
@@ -162,22 +328,15 @@ query = st.text_input(
     disabled=disabled,
     label_visibility="collapsed"
 )
+search_btn = st.button("🔍 Search", type="primary", disabled=disabled or not query)
 
-search_btn = st.button(
-    "🔍 Search", type="primary",
-    disabled=disabled or not query
-)
-
-# ── results ───────────────────────────────────────────────────
+# ── Search Logic ──────────────────────────────────────────────
 if search_btn and query:
     t0 = time.time()
-
     with st.spinner("Searching..."):
         try:
             if st.session_state.search_mode == "upload":
-                # Search uploaded document directly
                 dense, sparse, reranker_model = load_models()
-
                 raw = search_uploaded_doc(
                     query=query,
                     session_id=st.session_state.session_id,
@@ -185,101 +344,90 @@ if search_btn and query:
                     sparse_embedder=sparse,
                     k=top_k * 2
                 )
-
                 if use_reranking and raw:
-                    ranked = rerank(
-                        query, raw, top_k=top_k
-                    )
-                    results = [
-                        {
-                            "text":   r["result"].payload.get("text",""),
-                            "source": r["result"].payload.get("source",""),
-                            "topic":  r["result"].payload.get("topic",""),
-                            "score":  round(r["result"].score, 4),
-                            "rerank_score": round(
-                                r["rerank_score"], 4
-                            ),
-                            "word_count": r["result"].payload.get(
-                                "word_count", 0
-                            ),
-                        }
-                        for r in ranked
-                    ]
+                    ranked = rerank(query, raw, top_k=top_k)
+                    results = [{
+                        "text":         r["result"].payload.get("text", ""),
+                        "source":       r["result"].payload.get("source", ""),
+                        "topic":        r["result"].payload.get("topic", ""),
+                        "score":        round(r["result"].score, 4),
+                        "rerank_score": round(r["rerank_score"], 4),
+                        "word_count":   r["result"].payload.get("word_count", 0),
+                    } for r in ranked]
                     search_type = "upload+hybrid+reranked"
                 else:
-                    results = [
-                        {
-                            "text":   r.payload.get("text",""),
-                            "source": r.payload.get("source",""),
-                            "topic":  r.payload.get("topic",""),
-                            "score":  round(r.score, 4),
-                            "word_count": r.payload.get(
-                                "word_count", 0
-                            ),
-                        }
-                        for r in raw[:top_k]
-                    ]
+                    results = [{
+                        "text":       r.payload.get("text", ""),
+                        "source":     r.payload.get("source", ""),
+                        "topic":      r.payload.get("topic", ""),
+                        "score":      round(r.score, 4),
+                        "word_count": r.payload.get("word_count", 0),
+                    } for r in raw[:top_k]]
                     search_type = "upload+hybrid"
                 cache_hit = False
 
             else:
-                # Search knowledge base via API
                 resp = requests.post(
                     f"{API_URL}/search",
-                    json={
-                        "query":         query,
-                        "top_k":         top_k,
-                        "use_reranking": use_reranking,
-                    },
+                    json={"query": query, "top_k": top_k, "use_reranking": use_reranking},
                     timeout=30
                 ).json()
                 results     = resp.get("results", [])
-                search_type = resp.get("search_type","")
+                search_type = resp.get("search_type", "")
                 cache_hit   = resp.get("cache_hit", False)
 
-            elapsed = round((time.time()-t0)*1000)
+            elapsed = round((time.time() - t0) * 1000)
 
-            # Metrics
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Results", len(results))
-            c2.metric("Type", search_type)
-            c3.metric("Latency", f"{elapsed}ms")
-            c4.metric(
-                "Cache",
-                "HIT" if cache_hit else "MISS"
-            )
+            # ── Metrics Grid ──────────────────────────────────
+            cache_color = "#10b981" if cache_hit else "#F59E0B"
+            cache_label = "HIT ⚡" if cache_hit else "MISS"
+            st.markdown(f"""
+            <div class="summary-grid">
+                <div class="summary-box">
+                    <div class="summary-lbl">Results</div>
+                    <div class="summary-val" style="color:#EF4444;">{len(results)}</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-lbl">Type</div>
+                    <div class="summary-val" style="color:#6366F1;font-size:1.1rem;margin-top:6px;">{search_type}</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-lbl">Latency</div>
+                    <div class="summary-val" style="color:#06B6D4;">{elapsed}ms</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-lbl">Cache</div>
+                    <div class="summary-val" style="color:{cache_color};">{cache_label}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            st.divider()
-
+            # ── Result Cards ──────────────────────────────────
             if not results:
-                st.warning(
-                    "No relevant results found. "
-                    "Try a different query."
-                )
+                st.warning("No relevant results found. Try a different query.")
             else:
+                st.markdown("### Search Results")
                 for i, r in enumerate(results):
-                    rerank_str = (
-                        f" · Rerank: "
-                        f"{r.get('rerank_score',0):.4f}"
-                        if r.get("rerank_score")
-                        else ""
+                    rerank_html = (
+                        f'<span class="rerank-badge">rerank: {r.get("rerank_score", 0):.4f}</span>'
+                        if r.get("rerank_score") else ""
                     )
-                    with st.expander(
-                        f"**Result {i+1}** · "
-                        f"{r.get('topic','')} · "
-                        f"Score: {r.get('score',0):.4f}"
-                        f"{rerank_str}",
-                        expanded=(i == 0)
-                    ):
-                        st.write(r.get("text",""))
-                        ca, cb = st.columns(2)
-                        ca.caption(
-                            f" {r.get('source','')}"
-                        )
-                        cb.caption(
-                            f" {r.get('word_count',0)}"
-                            f" words"
-                        )
+                    st.markdown(f"""
+                    <div class="glass-card">
+                        <div class="card-title-row">
+                            <div class="card-source">Result {i+1} · {r.get("topic", r.get("source", ""))}</div>
+                            <div>
+                                <span class="badge-pill">score: {r.get("score", 0):.4f}</span>
+                                {rerank_html}
+                            </div>
+                        </div>
+                        <div class="card-quote">{r.get("text", "")}</div>
+                        <div class="card-meta">
+                            <span> {r.get("source", "")}</span>
+                            <span> {r.get("word_count", 0)} words</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Search failed: {e}")
