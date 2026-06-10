@@ -1,0 +1,1 @@
+The formula defining the HDI is promulgated by the United Nations Development Programme (UNDP). In general, to transform a raw variable, say , into a unit-free index between 0 and 1 (which allows different indices to be added together), the following formula is used:

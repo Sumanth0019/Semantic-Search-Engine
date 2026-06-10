@@ -1,0 +1,4 @@
+LE: Life expectancy at birth
+MYS: Mean years of schooling (Years that a person 25 years-of-age or older has spent in schools)
+EYS: Expected years of schooling (Years that a 5-year-old child will spend in schools throughout his life)
+GNIpc: Gross national income at purchasing power parity per capita
