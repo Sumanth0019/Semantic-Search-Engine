@@ -14,7 +14,7 @@ import config
 import auth
 import google_auth
 
-API_URL = "http://localhost:8000"
+API_URL = "https://semantic-search-engine-production-fc8f.up.railway.app"
 
 st.set_page_config(
     page_title="SemantiSeek — Semantic Search Engine",
