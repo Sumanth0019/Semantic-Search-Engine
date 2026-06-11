@@ -22,6 +22,14 @@ import shutil
 from fastapi import UploadFile, File
 from pydantic import BaseModel as PydanticBase
 
+
+
+class UploadSearchRequest(PydanticBase):
+    query: str
+    session_id: str
+    top_k: int = 5
+    use_reranking: bool = True
+    
 # ── startup / shutdown ──────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -235,13 +243,6 @@ async def search_upload(req: UploadSearchRequest, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-from pydantic import BaseModel as PydanticBase
-
-class UploadSearchRequest(PydanticBase):
-    query: str
-    session_id: str
-    top_k: int = 5
-    use_reranking: bool = True
     
 @app.post("/upload")
 async def upload_document(request: Request, file: UploadFile = File(...), session_id: str = ""):
