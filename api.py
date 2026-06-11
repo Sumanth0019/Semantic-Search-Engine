@@ -20,6 +20,7 @@ import cache as cache_module
 import os
 import shutil
 from fastapi import UploadFile, File
+from pydantic import BaseModel as PydanticBase
 
 # ── startup / shutdown ──────────────────────────────────────
 @asynccontextmanager
@@ -219,5 +220,46 @@ async def upload_document(file: UploadFile = File(...)):
             "filename": file.filename,
             "chunks_created": len(chunks)
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class UploadSearchRequest(PydanticBase):
+    query: str
+    session_id: str
+    top_k: int = 5
+    use_reranking: bool = True
+
+@app.post("/search-upload")
+async def search_upload(req: UploadSearchRequest, request: Request):
+    try:
+        raw = run_hybrid_search(
+            request.app.state,
+            req.query,
+            k=config.TOP_K
+        )
+
+        if req.use_reranking and raw:
+            ranked = reranker_module.rerank(req.query, raw, top_k=req.top_k)
+            results = [{
+                "text":         r["result"].payload.get("text", ""),
+                "source":       r["result"].payload.get("doc_id", ""),
+                "topic":        r["result"].payload.get("topic", ""),
+                "score":        round(r["result"].score, 4),
+                "rerank_score": round(r["rerank_score"], 4),
+                "word_count":   r["result"].payload.get("word_count", 0),
+            } for r in ranked]
+            search_type = "upload+hybrid+reranked"
+        else:
+            results = [{
+                "text":       r.payload.get("text", ""),
+                "source":     r.payload.get("doc_id", ""),
+                "topic":      r.payload.get("topic", ""),
+                "score":      round(r.score, 4),
+                "word_count": r.payload.get("word_count", 0),
+            } for r in raw[:req.top_k]]
+            search_type = "upload+hybrid"
+
+        return {"results": results, "search_type": search_type}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
