@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     app.state.sparse_embedder = SparseTextEmbedding(
         model_name=config.SPARSE_MODEL
     )
-    app.state.reranker = reranker_module.get_reranker()
+    #app.state.reranker = reranker_module.get_reranker()
     app.state.qdrant   = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
     print("All models loaded. API ready.")
     yield
