@@ -1,5 +1,5 @@
 # Embeddings & Models
-
+torchvision==0.23.0
 transformers==5.9.0
 sentence-transformers==5.5.1
 fastembed==0.8.0
