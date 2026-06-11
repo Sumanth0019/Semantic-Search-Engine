@@ -256,11 +256,10 @@ async def upload_document(request: Request, file: UploadFile = File(...), sessio
         docs   = ingest_module.clean_documents(docs)
         chunks = ingest_module.split_documents(docs)
 
-        sparse_embedder = ingest_module.get_sparse_embedder()
+  
         ingest_module.ingest_chunks_with_session(
             chunks, session_id,
-            request.app.state.dense_embedder,
-            sparse_embedder
+            request.app.state.dense_embedder
         )
 
         return {
