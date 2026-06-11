@@ -6,8 +6,7 @@ huggingface_hub==0.30.2
 
 fastembed==0.8.0
 safetensors==0.7.0
-tokenizers==0.22.2
-
+tokenizers==0.21.0
 
 # Vector DB & Cache
 qdrant-client==1.18.0
