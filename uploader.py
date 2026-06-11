@@ -89,7 +89,6 @@ def ingest_uploaded_file(
         for i, (chunk, dv) in enumerate(
             zip(chunks, dense_vectors)
 ):
-        ):
             points.append(PointStruct(
                 id=str(uuid.uuid4()),
                 vector={
