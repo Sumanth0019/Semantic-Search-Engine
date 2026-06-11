@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
         encode_kwargs={"normalize_embeddings": True}
     )
     #app.state.sparse_embedder = None
-    )
+    
     #app.state.reranker = reranker_module.get_reranker()
     app.state.qdrant   = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
     print("All models loaded. API ready.")
