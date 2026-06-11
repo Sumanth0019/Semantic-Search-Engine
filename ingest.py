@@ -147,7 +147,7 @@ def run():
     print(f"  Dense vector size : {len(sample)}")
 
     print("\n[5/5] Storing in Qdrant...")
-    client = QdrantClient(url=config.QDRANT_URL)
+    client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
     setup_hybrid_collection(client, len(sample))
     store_chunks(client, chunks,
                  dense_embedder, sparse_embedder)
