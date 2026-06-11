@@ -86,7 +86,7 @@ def ingest_uploaded_file(
         )
 
         # Store with session_id in payload
-        client = QdrantClient(url=config.QDRANT_URL)
+        client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
         points = []
         for i, (chunk, dv, sv) in enumerate(
             zip(chunks, dense_vectors, sparse_results)
@@ -146,7 +146,7 @@ def search_uploaded_doc(
         Prefetch, FusionQuery, Fusion
     )
 
-    client     = QdrantClient(url=config.QDRANT_URL)
+    client     = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
     dense_vec  = dense_embedder.embed_query(query)
     sparse_res = list(
         sparse_embedder.embed([query])
@@ -189,7 +189,7 @@ def delete_session(session_id: str):
         Filter, FieldCondition, MatchValue,
         FilterSelector
     )
-    client = QdrantClient(url=config.QDRANT_URL)
+    client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
     client.delete(
         collection_name=config.COLLECTION_NAME,
         points_selector=FilterSelector(
