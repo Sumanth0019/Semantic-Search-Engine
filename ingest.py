@@ -186,32 +186,20 @@ def load_single_document(path: str):
     print(f"  Loaded {len(docs)} pages from {os.path.basename(path)}")
     return docs
 
-def ingest_chunks_with_session(chunks, session_id: str, dense_embedder, sparse_embedder):
-    """Store chunks in Qdrant tagged with session_id so they can be filtered later."""
+def ingest_chunks_with_session(chunks, session_id: str, dense_embedder):
+    """Store chunks in Qdrant tagged with session_id (dense only)."""
     texts = [c.page_content for c in chunks]
-
     print(f"  Generating dense embeddings for {len(texts)} chunks...")
     dense_vectors = dense_embedder.embed_documents(texts)
-
-    print(f"  Generating sparse embeddings...")
-    sparse_results = list(sparse_embedder.embed(texts))
 
     client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
 
     points = []
-    for i, (chunk, dense_vec, sparse_res) in enumerate(
-        zip(chunks, dense_vectors, sparse_results)
-    ):
+    for i, (chunk, dense_vec) in enumerate(zip(chunks, dense_vectors)):
         source = chunk.metadata.get("source", "")
         points.append(PointStruct(
             id=str(uuid.uuid4()),
-            vector={
-                "dense": dense_vec,
-                "sparse": SparseVector(
-                    indices=sparse_res.indices.tolist(),
-                    values=sparse_res.values.tolist()
-                )
-            },
+            vector={"dense": dense_vec},
             payload={
                 "text":        chunk.page_content,
                 "source":      source,
