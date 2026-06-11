@@ -223,43 +223,29 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-class UploadSearchRequest(PydanticBase):
-    query: str
-    session_id: str
-    top_k: int = 5
-    use_reranking: bool = True
-
-@app.post("/search-upload")
-async def search_upload(req: UploadSearchRequest, request: Request):
+@app.post("/upload")
+async def upload_document(request: Request, file: UploadFile = File(...), session_id: str = ""):
     try:
-        raw = run_hybrid_search(
-            request.app.state,
-            req.query,
-            k=config.TOP_K
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        save_path = os.path.join(config.DATA_DIR, file.filename)
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        docs   = ingest_module.load_single_document(save_path)
+        docs   = ingest_module.clean_documents(docs)
+        chunks = ingest_module.split_documents(docs)
+
+        sparse_embedder = ingest_module.get_sparse_embedder()
+        ingest_module.ingest_chunks_with_session(
+            chunks, session_id,
+            request.app.state.dense_embedder,
+            sparse_embedder
         )
 
-        if req.use_reranking and raw:
-            ranked = reranker_module.rerank(req.query, raw, top_k=req.top_k)
-            results = [{
-                "text":         r["result"].payload.get("text", ""),
-                "source":       r["result"].payload.get("doc_id", ""),
-                "topic":        r["result"].payload.get("topic", ""),
-                "score":        round(r["result"].score, 4),
-                "rerank_score": round(r["rerank_score"], 4),
-                "word_count":   r["result"].payload.get("word_count", 0),
-            } for r in ranked]
-            search_type = "upload+hybrid+reranked"
-        else:
-            results = [{
-                "text":       r.payload.get("text", ""),
-                "source":     r.payload.get("doc_id", ""),
-                "topic":      r.payload.get("topic", ""),
-                "score":      round(r.score, 4),
-                "word_count": r.payload.get("word_count", 0),
-            } for r in raw[:req.top_k]]
-            search_type = "upload+hybrid"
-
-        return {"results": results, "search_type": search_type}
-
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "chunks_created": len(chunks)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
