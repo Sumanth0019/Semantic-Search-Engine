@@ -5,3 +5,4 @@ venv/
 Semantic-Search-Engine/
 .idea/
 .vscode/
+*.db
