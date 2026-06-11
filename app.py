@@ -11,6 +11,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from fastembed import SparseTextEmbedding
 from reranker import get_reranker, rerank
 import config
+import auth
 
 API_URL = "http://localhost:8000"
 
@@ -230,6 +231,46 @@ if "uploaded_file" not in st.session_state:
     st.session_state.uploaded_file = None
 if "search_mode" not in st.session_state:
     st.session_state.search_mode = "knowledge_base"
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
+
+# ── Auth Flow ─────────────────────────────────────────────────
+if not st.session_state.logged_in:
+    st.markdown("""
+    <div class="premium-banner" style="max-width: 500px; margin: 60px auto 30px auto;">
+        <div class="premium-title" style="font-size: 2.4rem;">SemantiSeek</div>
+        <div class="premium-subtitle">Sign in or create an account</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        tab1, tab2 = st.tabs(["Login", "Sign Up"])
+        with tab1:
+            l_user = st.text_input("Username", key="l_user")
+            l_pass = st.text_input("Password", type="password", key="l_pass")
+            if st.button("Login", key="l_btn"):
+                if auth.verify_user(l_user, l_pass):
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = l_user
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password")
+        with tab2:
+            s_user = st.text_input("Username", key="s_user")
+            s_pass = st.text_input("Password", type="password", key="s_pass")
+            if st.button("Sign Up", key="s_btn"):
+                if s_user and s_pass:
+                    res = auth.create_user(s_user, s_pass)
+                    if res["status"] == "success":
+                        st.success("Account created successfully! You can now log in.")
+                    else:
+                        st.error(res["message"])
+                else:
+                    st.error("Please enter a username and password")
+    st.stop()
 
 # ── Sidebar ───────────────────────────────────────────────────
 with st.sidebar:
@@ -253,6 +294,13 @@ with st.sidebar:
         """, unsafe_allow_html=True)
     except Exception:
         st.markdown('<div class="status-offline">❌ API offline — run: python main.py api</div>', unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-color:rgba(128,128,128,0.12);margin:18px 0;'/>", unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:1.05rem;font-weight:600;margin-bottom:12px;color:#6366F1;">👤 {st.session_state.current_user}</div>', unsafe_allow_html=True)
+    if st.button("Logout", key="logout_btn"):
+        st.session_state.logged_in = False
+        st.session_state.current_user = None
+        st.rerun()
 
 # ── Header Banner ─────────────────────────────────────────────
 st.markdown("""
