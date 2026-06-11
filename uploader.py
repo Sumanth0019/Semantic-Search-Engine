@@ -12,7 +12,6 @@ except ImportError:
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from fastembed import SparseTextEmbedding
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, SparseVector
 from cleaner import clean_documents
@@ -45,8 +44,7 @@ def ingest_uploaded_file(
     file_bytes: bytes,
     filename: str,
     session_id: str,
-    dense_embedder,
-    sparse_embedder
+    dense_embedder
 ) -> dict:
     ext = filename.lower().split(".")[-1]
 
@@ -132,7 +130,6 @@ def search_uploaded_doc(
     query: str,
     session_id: str,
     dense_embedder,
-    sparse_embedder=None,
     k: int = 5
 ) -> list:
 
