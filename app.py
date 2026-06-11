@@ -7,9 +7,7 @@ from uploader import (
     search_uploaded_doc,
     delete_session
 )
-from langchain_huggingface import HuggingFaceEmbeddings
-#from fastembed import SparseTextEmbedding
-from reranker import get_reranker, rerank
+# from fastembed import SparseTextEmbedding
 import config
 import auth
 import google_auth
@@ -214,15 +212,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Load models once ──────────────────────────────────────────
-@st.cache_resource
-def load_models():
-    dense = HuggingFaceEmbeddings(
-        model_name=config.DENSE_MODEL,
-        model_kwargs={"device": config.MODEL_DEVICE},
-        encode_kwargs={"normalize_embeddings": True}
-    )
-    reranker = get_reranker()
-    return dense, None, reranker
 
 # ── Session state ─────────────────────────────────────────────
 if "session_id" not in st.session_state:
@@ -343,14 +332,21 @@ if st.session_state.search_mode == "upload":
                     except Exception:
                         pass
                 session_id = str(uuid.uuid4())[:8]
-                dense, sparse, _ = load_models()
-                result = ingest_uploaded_file(
-                    file_bytes=uploaded.getvalue(),
-                    filename=uploaded.name,
-                    session_id=session_id,
-                    dense_embedder=dense,
-                    sparse_embedder=sparse
+                response = requests.post(
+                    f"{API_URL}/upload",
+                    files={
+                        "file": (
+                            uploaded.name,
+                            uploaded.getvalue()
+                        )
+                    },
+                    data={
+                        "session_id": session_id
+                    },
+                    timeout=300
                 )
+                
+                result = response.json()
                 if result["status"] == "success":
                     st.session_state.session_id   = session_id
                     st.session_state.uploaded_file = uploaded.name
@@ -401,14 +397,22 @@ if search_btn and query:
     with st.spinner("Searching..."):
         try:
             if st.session_state.search_mode == "upload":
-                dense, sparse, reranker_model = load_models()
-                raw = search_uploaded_doc(
-                    query=query,
-                    session_id=st.session_state.session_id,
-                    dense_embedder=dense,
-                    sparse_embedder=sparse,
-                    k=top_k * 2
+                resp = requests.post(
+                    f"{API_URL}/search-upload",
+                    json={
+                        "query": query,
+                        "session_id": st.session_state.session_id,
+                        "top_k": top_k,
+                        "use_reranking": use_reranking
+                    },
+                    timeout=300
                 )
+                
+                data = resp.json()
+                
+                results = data["results"]
+                search_type = data["search_type"]
+                cache_hit = False
                 if use_reranking and raw:
                     ranked = rerank(query, raw, top_k=top_k)
                     results = [{
