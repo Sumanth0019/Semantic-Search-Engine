@@ -27,8 +27,7 @@ async def lifespan(app: FastAPI):
         model_kwargs={"device": config.MODEL_DEVICE},
         encode_kwargs={"normalize_embeddings": True}
     )
-    app.state.sparse_embedder = SparseTextEmbedding(
-        model_name=config.SPARSE_MODEL
+    app.state.sparse_embedder = None
     )
     #app.state.reranker = reranker_module.get_reranker()
     app.state.qdrant   = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
@@ -59,9 +58,7 @@ app.add_middleware(
 def run_hybrid_search(app_state, query: str,
                       k: int, topic_filter=None):
     dense_vec  = app_state.dense_embedder.embed_query(query)
-    sparse_res = list(
-        app_state.sparse_embedder.embed([query])
-    )[0]
+    sparse_res = None
 
     query_filter = None
     if topic_filter:
@@ -74,26 +71,13 @@ def run_hybrid_search(app_state, query: str,
 
     results = app_state.qdrant.query_points(
         collection_name=config.COLLECTION_NAME,
-        prefetch=[
-            Prefetch(
-                query=dense_vec,
-                using="dense",
-                limit=k
-            ),
-            Prefetch(
-                query=SparseVector(
-                    indices=sparse_res.indices.tolist(),
-                    values=sparse_res.values.tolist()
-                ),
-                using="sparse",
-                limit=k
-            ),
-        ],
-        query=FusionQuery(fusion=Fusion.RRF),
+        query=dense_vec,
+        using="dense",
         limit=k,
         query_filter=query_filter,
         with_payload=True
     ).points
+    
     return results
 
 # ── endpoints ────────────────────────────────────────────────
