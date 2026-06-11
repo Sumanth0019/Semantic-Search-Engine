@@ -1,3 +1,4 @@
+
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -7,6 +8,7 @@ from qdrant_client.models import (
 from fastembed import SparseTextEmbedding
 import reranker
 import config
+import time
 
 _dense_embedder  = None
 _sparse_embedder = None
@@ -29,23 +31,42 @@ def get_sparse_embedder():
         )
     return _sparse_embedder
 
+
 def hybrid_search(query: str, k: int = None,
                   topic_filter: str = None) -> list:
+
+    start = time.time()
+
     k = k or config.TOP_K
-    client     = QdrantClient(url=config.QDRANT_URL)
-    dense_emb  = get_embedder()
+
+    client = QdrantClient(
+        url=config.QDRANT_URL,
+        api_key=config.QDRANT_API_KEY
+    )
+
+    dense_emb = get_embedder()
     sparse_emb = get_sparse_embedder()
 
-    dense_vec  = dense_emb.embed_query(query)
+    t1 = time.time()
+
+    dense_vec = dense_emb.embed_query(query)
+
+    t2 = time.time()
+
     sparse_res = list(sparse_emb.embed([query]))[0]
 
+    t3 = time.time()
+
     query_filter = None
+
     if topic_filter:
         query_filter = Filter(
-            must=[FieldCondition(
-                key="topic",
-                match=MatchValue(value=topic_filter)
-            )]
+            must=[
+                FieldCondition(
+                    key="topic",
+                    match=MatchValue(value=topic_filter)
+                )
+            ]
         )
 
     results = client.query_points(
@@ -70,6 +91,16 @@ def hybrid_search(query: str, k: int = None,
         query_filter=query_filter,
         with_payload=True
     ).points
+
+    t4 = time.time()
+
+    print("\n===== SEARCH TIMINGS =====")
+    print(f"Dense embedding : {(t2 - t1):.2f}s")
+    print(f"Sparse embedding: {(t3 - t2):.2f}s")
+    print(f"Qdrant search   : {(t4 - t3):.2f}s")
+    print(f"Hybrid total    : {(t4 - start):.2f}s")
+    print("==========================\n")
+
     return results
 
 def full_search(query: str,
