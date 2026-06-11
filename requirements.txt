@@ -1,11 +1,19 @@
 # Embeddings & Models
-torchvision==0.17.0
-transformers==4.51.3
-sentence-transformers==3.4.1
+torchvision==0.20.1
+
+# Use a newer transformers that supports huggingface-hub>=1.0
+transformers==4.52.4
+
+# sentence-transformers compatible with transformers 4.52.x
+sentence-transformers==4.1.0
+
+# huggingface-hub stays at your pinned version
+huggingface_hub==1.17.0
+
 fastembed==0.8.0
 safetensors==0.7.0
 tokenizers==0.22.2
-huggingface_hub==1.17.0
+
 
 # Vector DB & Cache
 qdrant-client==1.18.0
