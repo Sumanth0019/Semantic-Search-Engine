@@ -414,27 +414,6 @@ if search_btn and query:
                 results = data["results"]
                 search_type = data["search_type"]
                 cache_hit = False
-                if use_reranking and raw:
-                    ranked = rerank(query, raw, top_k=top_k)
-                    results = [{
-                        "text":         r["result"].payload.get("text", ""),
-                        "source":       r["result"].payload.get("source", ""),
-                        "topic":        r["result"].payload.get("topic", ""),
-                        "score":        round(r["result"].score, 4),
-                        "rerank_score": round(r["rerank_score"], 4),
-                        "word_count":   r["result"].payload.get("word_count", 0),
-                    } for r in ranked]
-                    search_type = "upload+hybrid+reranked"
-                else:
-                    results = [{
-                        "text":       r.payload.get("text", ""),
-                        "source":     r.payload.get("source", ""),
-                        "topic":      r.payload.get("topic", ""),
-                        "score":      round(r.score, 4),
-                        "word_count": r.payload.get("word_count", 0),
-                    } for r in raw[:top_k]]
-                    search_type = "upload+hybrid"
-                cache_hit = False
 
             else:
                 resp = requests.post(
