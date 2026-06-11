@@ -8,7 +8,7 @@ from uploader import (
     delete_session
 )
 from langchain_huggingface import HuggingFaceEmbeddings
-from fastembed import SparseTextEmbedding
+#from fastembed import SparseTextEmbedding
 from reranker import get_reranker, rerank
 import config
 import auth
@@ -221,9 +221,8 @@ def load_models():
         model_kwargs={"device": config.MODEL_DEVICE},
         encode_kwargs={"normalize_embeddings": True}
     )
-    sparse  = SparseTextEmbedding(model_name=config.SPARSE_MODEL)
     reranker = get_reranker()
-    return dense, sparse, reranker
+    return dense, None, reranker
 
 # ── Session state ─────────────────────────────────────────────
 if "session_id" not in st.session_state:
