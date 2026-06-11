@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 from langchain_huggingface import HuggingFaceEmbeddings
-from fastembed import SparseTextEmbedding
+# from fastembed import SparseTextEmbedding
 from qdrant_client.models import (
     Filter, FieldCondition, MatchValue,
     SparseVector, FusionQuery, Fusion, Prefetch
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
         model_kwargs={"device": config.MODEL_DEVICE},
         encode_kwargs={"normalize_embeddings": True}
     )
-    app.state.sparse_embedder = None
+    #app.state.sparse_embedder = None
     )
     #app.state.reranker = reranker_module.get_reranker()
     app.state.qdrant   = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
