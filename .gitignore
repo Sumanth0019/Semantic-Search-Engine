@@ -6,3 +6,4 @@ Semantic-Search-Engine/
 .idea/
 .vscode/
 *.db
+.env
