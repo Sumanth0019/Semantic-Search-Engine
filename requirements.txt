@@ -13,7 +13,7 @@ certifi==2026.5.20
 charset-normalizer==3.4.7
 click==8.4.1
 colorama==0.4.6
-datasets==4.0.0
+# datasets==4.0.0
 dill==0.3.8
 diskcache==5.6.3
 distro==1.9.0
@@ -100,7 +100,7 @@ python-multipart==0.0.32
 pywin32==311
 PyYAML==6.0.3
 qdrant-client==1.18.0
-ragas==0.4.3
+# ragas==0.4.3
 redis==8.0.0
 referencing==0.37.0
 regex==2026.5.9
