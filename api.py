@@ -204,7 +204,8 @@ async def ingest():
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     try:
-        save_path = os.path.join(config.DOCS_DIR, file.filename)
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        save_path = os.path.join(config.DATA_DIR, file.filename)
         with open(save_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
         
