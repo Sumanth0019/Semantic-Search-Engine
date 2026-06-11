@@ -93,7 +93,6 @@ def ingest_uploaded_file(
                 id=str(uuid.uuid4()),
                 vector={
                     "dense": dv
-                    )
                 },
                 payload={
                     "text":       chunk.page_content,
