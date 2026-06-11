@@ -7,10 +7,9 @@ from langchain_community.document_loaders import TextLoader
 from cleaner import clean_documents
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Distance, VectorParams, PointStruct,
-    SparseVectorParams, SparseIndexParams, SparseVector
+    Distance, VectorParams, PointStruct
 )
-from fastembed import SparseTextEmbedding
+#from fastembed import SparseTextEmbedding
 from cleaner import clean_documents
 import config
 
@@ -42,18 +41,18 @@ def get_dense_embedder():
         encode_kwargs={"normalize_embeddings": config.NORMALIZE_EMBEDS}
     )
 
-def get_sparse_embedder():
-    print("  Loading sparse model (SPLADE)...")
-    return SparseTextEmbedding(
-        model_name=config.SPARSE_MODEL
-    )
 
-def setup_hybrid_collection(client, vector_size):
-    existing = [c.name for c in
-                client.get_collections().collections]
+def setup_collection(client, vector_size):
+
+    existing = [
+        c.name
+        for c in client.get_collections().collections
+    ]
+
     if config.COLLECTION_NAME in existing:
         client.delete_collection(config.COLLECTION_NAME)
-        print("  Deleted old collection")
+        print("Deleted old collection")
+
     client.create_collection(
         collection_name=config.COLLECTION_NAME,
         vectors_config={
@@ -61,15 +60,13 @@ def setup_hybrid_collection(client, vector_size):
                 size=vector_size,
                 distance=Distance.COSINE
             )
-        },
-        sparse_vectors_config={
-            "sparse": SparseVectorParams(
-                index=SparseIndexParams(on_disk=False)
-            )
         }
     )
-    print(f"  Created hybrid collection: "
-          f"{config.COLLECTION_NAME}")
+
+    print(
+        f"Created collection: "
+        f"{config.COLLECTION_NAME}"
+    )
 
 def extract_topic(source_path: str) -> str:
     fname = os.path.basename(source_path)
@@ -78,55 +75,72 @@ def extract_topic(source_path: str) -> str:
     topic = parts[0].replace("_", " ") if parts else name
     return topic
 
-def store_chunks(client, chunks,
-                 dense_embedder, sparse_embedder):
+def store_chunks(
+    client,
+    chunks,
+    dense_embedder
+):
+
     texts = [c.page_content for c in chunks]
-    print(f"  Generating dense embeddings "
-          f"for {len(texts)} chunks...")
+
+    print(
+        f"Generating dense embeddings "
+        f"for {len(texts)} chunks..."
+    )
+
     dense_vectors = dense_embedder.embed_documents(texts)
 
-    print(f"  Generating sparse embeddings...")
-    sparse_results = list(sparse_embedder.embed(texts))
-
-    print(f"  Building points...")
     points = []
-    for i, (chunk, dense_vec, sparse_res) in enumerate(
-        zip(chunks, dense_vectors, sparse_results)
+
+    for i, (chunk, dense_vec) in enumerate(
+        zip(chunks, dense_vectors)
     ):
-        source = chunk.metadata.get("source", "")
+
+        source = chunk.metadata.get(
+            "source",
+            ""
+        )
+
         topic = extract_topic(source)
-        points.append(PointStruct(
-            id=str(uuid.uuid4()),
-            vector={
-                "dense": dense_vec,
-                "sparse": SparseVector(
-                    indices=sparse_res.indices.tolist(),
-                    values=sparse_res.values.tolist()
-                )
-            },
-            payload={
-                "text":        chunk.page_content,
-                "source":      source,
-                "doc_id":      os.path.basename(source),
-                "topic":       topic,
-                "chunk_index": i,
-                "char_count":  len(chunk.page_content),
-                "word_count":  len(chunk.page_content.split()),
-                "ingested_at": datetime.utcnow().isoformat(),
-            }
-        ))
+
+        points.append(
+            PointStruct(
+                id=str(uuid.uuid4()),
+                vector={
+                    "dense": dense_vec
+                },
+                payload={
+                    "text": chunk.page_content,
+                    "source": source,
+                    "doc_id": os.path.basename(source),
+                    "topic": topic,
+                    "chunk_index": i,
+                    "char_count": len(chunk.page_content),
+                    "word_count": len(
+                        chunk.page_content.split()
+                    ),
+                    "ingested_at":
+                        datetime.utcnow().isoformat()
+                }
+            )
+        )
 
     batch_size = 100
-    total_batches = (len(points) - 1) // batch_size + 1
-    for start in range(0, len(points), batch_size):
-        batch = points[start:start + batch_size]
+
+    for start in range(
+        0,
+        len(points),
+        batch_size
+    ):
+
         client.upsert(
             collection_name=config.COLLECTION_NAME,
-            points=batch
+            points=points[start:start+batch_size]
         )
-        print(f"  Stored batch "
-              f"{start // batch_size + 1}/{total_batches}")
-    print(f"  Total stored: {len(points)} vectors")
+
+    print(
+        f"Stored {len(points)} vectors"
+    )
 
 def run():
     print("=== Ingestion Pipeline (Hybrid) ===\n")
@@ -142,15 +156,14 @@ def run():
 
     print("\n[4/5] Loading embedding models...")
     dense_embedder  = get_dense_embedder()
-    sparse_embedder = get_sparse_embedder()
     sample = dense_embedder.embed_query("test")
     print(f"  Dense vector size : {len(sample)}")
 
     print("\n[5/5] Storing in Qdrant...")
     client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
-    setup_hybrid_collection(client, len(sample))
+    setup_collection(client, len(sample))
     store_chunks(client, chunks,
-                 dense_embedder, sparse_embedder)
+                 dense_embedder)
 
     info = client.get_collection(config.COLLECTION_NAME)
     print(f"\n  Final vector count: {info.points_count}")
