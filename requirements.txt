@@ -1,8 +1,8 @@
 # Embeddings & Models
 torch==2.2.0
 torchvision==0.17.0
-transformers==5.9.0
-sentence-transformers==5.5.1
+transformers==4.51.3
+sentence-transformers==3.4.1
 fastembed==0.8.0
 safetensors==0.7.0
 tokenizers==0.22.2
