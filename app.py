@@ -7,6 +7,8 @@ from uploader import (
     search_uploaded_doc,
     delete_session
 )
+from langchain_huggingface import HuggingFaceEmbeddings
+from reranker import get_reranker, rerank
 # from fastembed import SparseTextEmbedding
 import config
 import auth
@@ -212,7 +214,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Load models once ──────────────────────────────────────────
+@st.cache_resource
+def load_models():
+    dense = HuggingFaceEmbeddings(
+        model_name=config.DENSE_MODEL,
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True}
+    )
 
+    return dense, None, None
 # ── Session state ─────────────────────────────────────────────
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
