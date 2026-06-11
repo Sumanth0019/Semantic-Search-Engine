@@ -59,19 +59,16 @@ app.add_middleware(
 )
 
 # ── helpers ──────────────────────────────────────────────────
-def run_hybrid_search(app_state, query: str,
-                      k: int, topic_filter=None):
-    dense_vec  = app_state.dense_embedder.embed_query(query)
-    sparse_res = None
+def run_hybrid_search(app_state, query, k, topic_filter=None, session_filter=None):
+    dense_vec = app_state.dense_embedder.embed_query(query)
 
-    query_filter = None
+    must_conditions = []
     if topic_filter:
-        query_filter = Filter(
-            must=[FieldCondition(
-                key="topic",
-                match=MatchValue(value=topic_filter)
-            )]
-        )
+        must_conditions.append(FieldCondition(key="topic", match=MatchValue(value=topic_filter)))
+    if session_filter:
+        must_conditions.append(FieldCondition(key="session_id", match=MatchValue(value=session_filter)))
+
+    query_filter = Filter(must=must_conditions) if must_conditions else None
 
     results = app_state.qdrant.query_points(
         collection_name=config.COLLECTION_NAME,
@@ -81,7 +78,7 @@ def run_hybrid_search(app_state, query: str,
         query_filter=query_filter,
         with_payload=True
     ).points
-    
+
     return results
 
 # ── endpoints ────────────────────────────────────────────────
@@ -202,24 +199,39 @@ async def ingest():
         raise HTTPException(
             status_code=500, detail=str(e)
         )
-@app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+@app.post("/search-upload")
+async def search_upload(req: UploadSearchRequest, request: Request):
     try:
-        os.makedirs(config.DATA_DIR, exist_ok=True)
-        save_path = os.path.join(config.DATA_DIR, file.filename)
-        with open(save_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-        
-        docs   = ingest_module.load_documents()
-        docs   = ingest_module.clean_documents(docs)
-        chunks = ingest_module.split_documents(docs)
-        ingest_module.run()
-        
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "chunks_created": len(chunks)
-        }
+        raw = run_hybrid_search(
+            request.app.state,
+            req.query,
+            k=config.TOP_K,
+            session_filter=req.session_id  # ← only searches this session's chunks
+        )
+
+        if req.use_reranking and raw:
+            ranked = reranker_module.rerank(req.query, raw, top_k=req.top_k)
+            results = [{
+                "text":         r["result"].payload.get("text", ""),
+                "source":       r["result"].payload.get("doc_id", ""),
+                "topic":        r["result"].payload.get("topic", ""),
+                "score":        round(r["result"].score, 4),
+                "rerank_score": round(r["rerank_score"], 4),
+                "word_count":   r["result"].payload.get("word_count", 0),
+            } for r in ranked]
+            search_type = "upload+reranked"
+        else:
+            results = [{
+                "text":       r.payload.get("text", ""),
+                "source":     r.payload.get("doc_id", ""),
+                "topic":      r.payload.get("topic", ""),
+                "score":      round(r.score, 4),
+                "word_count": r.payload.get("word_count", 0),
+            } for r in raw[:req.top_k]]
+            search_type = "upload+dense"
+
+        return {"results": results, "search_type": search_type}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
