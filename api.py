@@ -17,6 +17,9 @@ import ingest as ingest_module
 import config
 import time
 import cache as cache_module
+import os
+import shutil
+from fastapi import UploadFile, File
 
 # ── startup / shutdown ──────────────────────────────────────
 @asynccontextmanager
@@ -198,3 +201,22 @@ async def ingest():
         raise HTTPException(
             status_code=500, detail=str(e)
         )
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...)):
+    try:
+        save_path = os.path.join(config.DOCS_DIR, file.filename)
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        
+        docs   = ingest_module.load_documents()
+        docs   = ingest_module.clean_documents(docs)
+        chunks = ingest_module.split_documents(docs)
+        ingest_module.run()
+        
+        return {
+            "status": "success",
+            "filename": file.filename,
+            "chunks_created": len(chunks)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
