@@ -1,5 +1,4 @@
 # Embeddings & Models
-torch==2.2.0
 torchvision==0.17.0
 transformers==4.51.3
 sentence-transformers==3.4.1
