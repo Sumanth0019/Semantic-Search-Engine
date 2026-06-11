@@ -12,6 +12,7 @@ from fastembed import SparseTextEmbedding
 from reranker import get_reranker, rerank
 import config
 import auth
+import google_auth
 
 API_URL = "http://localhost:8000"
 
@@ -237,6 +238,20 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = None
 
 # ── Auth Flow ─────────────────────────────────────────────────
+if "code" in st.query_params and not st.session_state.logged_in:
+    code = st.query_params["code"]
+    try:
+        access_token = google_auth.get_access_token(code)
+        email = google_auth.get_user_email(access_token)
+        if email:
+            auth.get_or_create_google_user(email)
+            st.session_state.logged_in = True
+            st.session_state.current_user = email
+            st.query_params.clear()
+            st.rerun()
+    except Exception as e:
+        st.error(f"Google Login failed: {e}")
+
 if not st.session_state.logged_in:
     st.markdown("""
     <div class="premium-banner" style="max-width: 500px; margin: 60px auto 30px auto;">
@@ -258,6 +273,9 @@ if not st.session_state.logged_in:
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
+            st.markdown("<hr style='margin: 15px 0;'/>", unsafe_allow_html=True)
+            google_url = google_auth.get_login_url()
+            st.markdown(f'<a href="{google_url}" target="_self" style="display:block; text-align:center; background:white; color:#333; padding:10px; border-radius:8px; text-decoration:none; font-weight:600; border:1px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition:all 0.2s;"><img src="https://www.google.com/favicon.ico" style="width:16px; margin-right:8px; vertical-align:middle; position:relative; top:-1px;">Continue with Google</a>', unsafe_allow_html=True)
         with tab2:
             s_user = st.text_input("Username", key="s_user")
             s_pass = st.text_input("Password", type="password", key="s_pass")
