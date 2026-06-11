@@ -81,23 +81,19 @@ def ingest_uploaded_file(
         # Embed
         texts = [c.page_content for c in chunks]
         dense_vectors = dense_embedder.embed_documents(texts)
-        sparse_results = list(
-            sparse_embedder.embed(texts)
-        )
+    
 
         # Store with session_id in payload
         client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
         points = []
-        for i, (chunk, dv, sv) in enumerate(
-            zip(chunks, dense_vectors, sparse_results)
+        for i, (chunk, dv) in enumerate(
+            zip(chunks, dense_vectors)
+):
         ):
             points.append(PointStruct(
                 id=str(uuid.uuid4()),
                 vector={
-                    "dense": dv,
-                    "sparse": SparseVector(
-                        indices=sv.indices.tolist(),
-                        values=sv.values.tolist()
+                    "dense": dv
                     )
                 },
                 payload={
@@ -138,50 +134,41 @@ def search_uploaded_doc(
     query: str,
     session_id: str,
     dense_embedder,
-    sparse_embedder,
+    sparse_embedder=None,
     k: int = 5
 ) -> list:
+
     from qdrant_client.models import (
-        Filter, FieldCondition, MatchValue,
-        Prefetch, FusionQuery, Fusion
+        Filter,
+        FieldCondition,
+        MatchValue
     )
 
-    client     = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
-    dense_vec  = dense_embedder.embed_query(query)
-    sparse_res = list(
-        sparse_embedder.embed([query])
-    )[0]
+    client = QdrantClient(
+        url=config.QDRANT_URL,
+        api_key=config.QDRANT_API_KEY
+    )
+
+    dense_vec = dense_embedder.embed_query(query)
 
     session_filter = Filter(
-        must=[FieldCondition(
-            key="session_id",
-            match=MatchValue(value=session_id)
-        )]
+        must=[
+            FieldCondition(
+                key="session_id",
+                match=MatchValue(value=session_id)
+            )
+        ]
     )
 
     results = client.query_points(
         collection_name=config.COLLECTION_NAME,
-        prefetch=[
-            Prefetch(
-                query=dense_vec,
-                using="dense",
-                limit=k * 2,
-                filter=session_filter
-            ),
-            Prefetch(
-                query=SparseVector(
-                    indices=sparse_res.indices.tolist(),
-                    values=sparse_res.values.tolist()
-                ),
-                using="sparse",
-                limit=k * 2,
-                filter=session_filter
-            ),
-        ],
-        query=FusionQuery(fusion=Fusion.RRF),
+        query=dense_vec,
+        using="dense",
         limit=k,
+        query_filter=session_filter,
         with_payload=True
     ).points
+
     return results
 
 def delete_session(session_id: str):
