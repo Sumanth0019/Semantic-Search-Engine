@@ -346,7 +346,7 @@ if st.session_state.search_mode == "upload":
                     },
                     timeout=300
                 )
-                
+                st.write(response.json())
                 result = response.json()
                 if result["status"] == "success":
                     st.session_state.session_id   = session_id
