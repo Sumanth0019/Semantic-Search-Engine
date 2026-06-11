@@ -168,6 +168,70 @@ def run():
     info = client.get_collection(config.COLLECTION_NAME)
     print(f"\n  Final vector count: {info.points_count}")
     print("\nIngestion complete.")
+def load_single_document(path: str):
+    """Load a single file (txt, pdf, docx)."""
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".txt":
+        from langchain_community.document_loaders import TextLoader
+        loader = TextLoader(path, encoding="utf-8")
+    elif ext == ".pdf":
+        from langchain_community.document_loaders import PyPDFLoader
+        loader = PyPDFLoader(path)
+    elif ext == ".docx":
+        from langchain_community.document_loaders import Docx2txtLoader
+        loader = Docx2txtLoader(path)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
+    docs = loader.load()
+    print(f"  Loaded {len(docs)} pages from {os.path.basename(path)}")
+    return docs
 
+def ingest_chunks_with_session(chunks, session_id: str, dense_embedder, sparse_embedder):
+    """Store chunks in Qdrant tagged with session_id so they can be filtered later."""
+    texts = [c.page_content for c in chunks]
+
+    print(f"  Generating dense embeddings for {len(texts)} chunks...")
+    dense_vectors = dense_embedder.embed_documents(texts)
+
+    print(f"  Generating sparse embeddings...")
+    sparse_results = list(sparse_embedder.embed(texts))
+
+    client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
+
+    points = []
+    for i, (chunk, dense_vec, sparse_res) in enumerate(
+        zip(chunks, dense_vectors, sparse_results)
+    ):
+        source = chunk.metadata.get("source", "")
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector={
+                "dense": dense_vec,
+                "sparse": SparseVector(
+                    indices=sparse_res.indices.tolist(),
+                    values=sparse_res.values.tolist()
+                )
+            },
+            payload={
+                "text":        chunk.page_content,
+                "source":      source,
+                "doc_id":      os.path.basename(source),
+                "topic":       session_id,
+                "session_id":  session_id,
+                "chunk_index": i,
+                "char_count":  len(chunk.page_content),
+                "word_count":  len(chunk.page_content.split()),
+                "ingested_at": datetime.utcnow().isoformat(),
+            }
+        ))
+
+    batch_size = 100
+    for start in range(0, len(points), batch_size):
+        client.upsert(
+            collection_name=config.COLLECTION_NAME,
+            points=points[start:start + batch_size]
+        )
+    print(f"  Stored {len(points)} vectors with session_id={session_id}")
+    
 if __name__ == "__main__":
     run()
