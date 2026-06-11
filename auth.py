@@ -47,3 +47,15 @@ def verify_user(username: str, password: str) -> bool:
     if result and result[0] == _hash_password(password):
         return True
     return False
+
+def get_or_create_google_user(email: str) -> None:
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (email,))
+    result = cursor.fetchone()
+    if not result:
+        cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", 
+                       (email, "GOOGLE_OAUTH_USER"))
+        conn.commit()
+    conn.close()
