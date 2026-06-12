@@ -419,7 +419,7 @@ if search_btn and query:
                 resp = requests.post(
                     f"{API_URL}/search",
                     json={"query": query, "top_k": top_k, "use_reranking": use_reranking},
-                    timeout=30
+                    timeout=300
                 ).json()
                 results     = resp.get("results", [])
                 search_type = resp.get("search_type", "")
