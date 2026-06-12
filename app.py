@@ -334,15 +334,12 @@ if st.session_state.search_mode == "upload":
                         pass
                 session_id = str(uuid.uuid4())[:8]
                 response = requests.post(
-                    f"{API_URL}/upload",
+                    f"{API_URL}/upload?session_id={session_id}",  # ← pass as query param
                     files={
                         "file": (
                             uploaded.name,
                             uploaded.getvalue()
                         )
-                    },
-                    data={
-                        "session_id": session_id
                     },
                     timeout=300
                 )
@@ -410,7 +407,10 @@ if search_btn and query:
                 )
                 
                 data = resp.json()
-                
+                if "detail" in data:
+                    st.error(f"Search error: {data['detail']}")
+                    st.stop()
+                                
                 results = data["results"]
                 search_type = data["search_type"]
                 cache_hit = False
