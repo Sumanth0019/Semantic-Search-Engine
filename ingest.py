@@ -203,8 +203,17 @@ def ingest_chunks_with_session(chunks, session_id: str, dense_embedder):
     texts = [c.page_content for c in chunks]
     print(f"  Generating dense embeddings for {len(texts)} chunks...")
     dense_vectors = dense_embedder.embed_documents(texts)
-
     client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
+
+    from qdrant_client.models import PayloadSchemaType
+    try:
+        client.create_payload_index(
+            collection_name=config.COLLECTION_NAME,
+            field_name="session_id",
+            field_schema=PayloadSchemaType.KEYWORD
+        )
+    except Exception:
+        pass  # already exists
 
     points = []
     for i, (chunk, dense_vec) in enumerate(zip(chunks, dense_vectors)):
@@ -224,7 +233,6 @@ def ingest_chunks_with_session(chunks, session_id: str, dense_embedder):
                 "ingested_at": datetime.utcnow().isoformat(),
             }
         ))
-
     batch_size = 100
     for start in range(0, len(points), batch_size):
         client.upsert(
