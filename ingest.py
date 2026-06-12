@@ -160,11 +160,23 @@ def run():
     print(f"  Dense vector size : {len(sample)}")
 
     print("\n[5/5] Storing in Qdrant...")
-    client = QdrantClient(url=config.QDRANT_URL,api_key=config.QDRANT_API_KEY)
-    setup_collection(client, len(sample))
-    store_chunks(client, chunks,
-                 dense_embedder)
+    client = QdrantClient(url=config.QDRANT_URL, api_key=config.QDRANT_API_KEY)
 
+    setup_collection(client, len(sample))  # ← collection created first
+    
+    # Now create the index on the existing collection
+    from qdrant_client.models import PayloadSchemaType
+    try:
+        client.create_payload_index(
+            collection_name=config.COLLECTION_NAME,
+            field_name="session_id",
+            field_schema=PayloadSchemaType.KEYWORD
+        )
+        print("  Created session_id payload index")
+    except Exception:
+        pass
+    
+    store_chunks(client, chunks, dense_embedder)
     info = client.get_collection(config.COLLECTION_NAME)
     print(f"\n  Final vector count: {info.points_count}")
     print("\nIngestion complete.")
